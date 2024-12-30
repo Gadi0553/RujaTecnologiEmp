@@ -1,0 +1,6 @@
+@RujaTecnologi_HostAddress = http://localhost:5196
+
+GET {{RujaTecnologi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
