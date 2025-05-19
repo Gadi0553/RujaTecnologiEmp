@@ -1,28 +1,51 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from "../ApiClient";
+import {data} from "autoprefixer";
 
 const Register = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null); // Agregado para mostrar el mensaje de éxito
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+
+    const validateEmail = (email: string) => {
+        // Expresión regular para verificar que el correo termine en dominios específicos
+        const validDomains = ['gmail.com', 'hotmail.com', 'yahoo.com']; // Puedes agregar más dominios aquí
+        const regex = /^[a-zA-Z0-9._%+-]+@([a-zA-Z0-9.-]+\.)+(com|org|net)$/;
+
+        if (!regex.test(email)) {
+            return false;
+        }
+
+        // Extraemos el dominio y verificamos si es uno de los válidos
+        const domain = email.split('@')[1];
+        return validDomains.includes(domain);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
-        setSuccessMessage(null); // Resetear el mensaje de éxito al intentar enviar el formulario
+        setSuccessMessage(null);
+
+        // Validar el correo electrónico
+        if (!validateEmail(email)) {
+            setError('El correo electrónico debe ser de un dominio válido (gmail.com, hotmail.com, etc.).');
+            setIsLoading(false);
+            return;
+        }
 
         try {
             const payload = {
                 email: email,
                 password: password,
-                roles: [], // Puedes agregar roles específicos si es necesario
+                roles: [],
             };
 
-            const response = await fetch('https://localhost:7191/api/Register/register', {
+            const response = await apiClient.post('/api/Register/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -30,18 +53,13 @@ const Register = () => {
                 body: JSON.stringify(payload),
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Registration failed');
-            }
 
-            const data = await response.json();
+            console.log(response.data);
             console.log('Registration successful:', data);
-            setSuccessMessage('¡Usuario registrado con éxito!'); // Mostrar el mensaje de éxito
-            // Redirect to login page after success
+            setSuccessMessage('¡Usuario registrado con éxito!');
             setTimeout(() => {
-                navigate('/login'); // Redirigir después de unos segundos
-            }, 2000); // Espera 2 segundos antes de redirigir
+                navigate('/login');
+            }, 2000);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unexpected error occurred');
         } finally {
@@ -88,6 +106,10 @@ const Register = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />
+                        </div>
+                        {/* Texto adicional debajo de la contraseña */}
+                        <div className="mt-1 text-sm text-gray-500 ml-4">
+                            Utiliza mayúsculas y caracteres especiales
                         </div>
                     </div>
 

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Text;
@@ -10,10 +11,20 @@ namespace RujaTecnologi
 {
     public class Program
     {
+
         public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
+            builder.WebHost.UseSentry(o =>
+            {
+                o.Dsn = "https://16ce283d280fb1ab5e8877203b8c24ee@o4508639808913408.ingest.us.sentry.io/4508639810420736";
+                // When configuring for the first time, to see what the SDK is doing:
+                o.Debug = true;
+                // Set TracesSampleRate to 1.0 to capture 100%
+                // of transactions for tracing.
+                // We recommend adjusting this value in production
+                o.TracesSampleRate = 1.0;
+            });
             // Add services to the container.
 
             // Configurar servicios de autenticación
@@ -83,7 +94,13 @@ namespace RujaTecnologi
             app.UseAuthorization();
             app.MapControllers().RequireAuthorization();
 
-
+            app.UseStaticFiles(); // Para servir archivos estáticos
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(
+                    Path.Combine(Directory.GetCurrentDirectory(), "Uploads")),
+                RequestPath = "/Uploads"
+            });
 
             using (var scope = app.Services.CreateScope())
             {

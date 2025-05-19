@@ -1,79 +1,158 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+using System.Threading.Tasks;
 
 namespace RujaTecnologi.Controllers
 {
-    [Route("api/Productos")]
+   
     [ApiController]
+    [Route("api/[controller]")]
     public class ProductosController : ControllerBase
     {
+        private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly AppDbContext _appDbContext;
-
-        public ProductosController(IWebHostEnvironment webHostEnvironment, AppDbContext appDbContext)
+        private const string ImageBaseUrl = "https://localhost:7191/api/Files/images/";
+        public ProductosController(AppDbContext context, IWebHostEnvironment webHostEnvironment)
         {
+            _context = context;
             _webHostEnvironment = webHostEnvironment;
-            _appDbContext = appDbContext;
         }
 
-        // GET: api/<ProductosController>
+        // GET: api/Productos
         [HttpGet]
-        public IEnumerable<Productos> Get()
-        {
-            return _appDbContext.Productos;
-        }
-
-        // GET api/<ProductosController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
-        {
-            return "value";
-        }
-
-        // POST api/<ProductosController>
-        // POST api/<ProductosController>
         [AllowAnonymous]
-        [HttpPost(Name = nameof(CreateProducto))]
-        public IActionResult CreateProducto(Productos request)
+        public async Task<ActionResult<IEnumerable<Productos>>> GetProductos()
         {
+          
+            return _context.Productos;
+        }
+
+        // GET: api/Productos/5
+        [AllowAnonymous]
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Productos>> GetProducto(int id)
+        {
+            var producto = await _context.Productos.FindAsync(id);
+
+            if (producto == null)
+            {
+                return NotFound();
+            }
+
+            return producto;
+        }
+
+        // POST: api/Productos
+        // POST: api/Productos
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<ActionResult<Productos>> PostProducto(Productos request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Verifica que la categoría exista
+            var categoria = await _context.Categorias.FindAsync(request.CategoriaId);
+            if (categoria == null)
+            {
+                return BadRequest("La categoría especificada no existe.");
+            }
+
             var producto = new Productos
             {
                 Nombre = request.Nombre,
                 Descripcion = request.Descripcion,
                 Precio = request.Precio,
                 Stock = request.Stock,
+                ImagenURL = request.ImagenURL,
                 CategoriaId = request.CategoriaId
             };
 
-            if (!string.IsNullOrEmpty(request.ImagenURL))
+            _context.Productos.Add(producto);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetProducto), new { id = producto.ProductoId }, producto);
+        }
+
+
+        // PUT: api/Productos/5
+        [AllowAnonymous]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutProducto(int id, [FromForm] Productos producto, IFormFile? imagen)
+        {
+            if (id != producto.ProductoId)
             {
-                var filePath = Path.Combine(_webHostEnvironment.ContentRootPath, "Uploads", request.ImagenURL);
-                if (System.IO.File.Exists(filePath))
-                {
-                    producto.ImagenURL = request.ImagenURL;
-                }
+                return BadRequest();
             }
 
-            _appDbContext.Productos.Add(producto);
-            _appDbContext.SaveChanges();
+            var existingProducto = await _context.Productos.FindAsync(id);
+            if (existingProducto == null)
+            {
+                return NotFound();
+            }
 
-            return Ok(producto);
+            if (imagen != null)
+            {
+                // Usar el FilesController para guardar la nueva imagen
+                var filesController = new FilesController(_webHostEnvironment);
+                var result = await filesController.Upload(imagen) as ObjectResult;
+
+                if (result?.Value is object fileResult &&
+                    fileResult.GetType().GetProperty("fileName")?.GetValue(fileResult) is string fileName)
+                {
+                    // Construir la URL de la imagen
+                    var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                    producto.ImagenURL = $"{baseUrl}/Uploads/{fileName}";
+                }
+            }
+            else
+            {
+                // Mantener la URL de la imagen existente si no se proporciona una nueva
+                producto.ImagenURL = existingProducto.ImagenURL;
+            }
+
+            _context.Entry(existingProducto).CurrentValues.SetValues(producto);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ProductoExists(id))
+                {
+                    return NotFound();
+                }
+                throw;
+            }
+
+            return NoContent();
         }
 
-
-        // PUT api/<ProductosController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE api/<ProductosController>/5
+        // DELETE: api/Productos/5
         [HttpDelete("{id}")]
-        public void Delete(int id)
+        [AllowAnonymous]
+        public async Task<IActionResult> DeleteProducto(int id)
         {
+            var producto = await _context.Productos.FindAsync(id);
+            if (producto == null)
+            {
+                return NotFound();
+            }
+
+            _context.Productos.Remove(producto);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private bool ProductoExists(int id)
+        {
+            return _context.Productos.Any(e => e.ProductoId == id);
         }
     }
 }

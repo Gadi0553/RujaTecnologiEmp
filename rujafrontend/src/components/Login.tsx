@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import apiClient from "../ApiClient";
 
-const Login = ({ setIsLoggedIn }) => {
+const Login = ({ setIsLoggedIn, setIsAdmin }) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -18,8 +19,8 @@ const Login = ({ setIsLoggedIn }) => {
 
     const verifyToken = async (token) => {
         try {
-            const response = await axios.get(
-                "https://localhost:7191/api/Register/current-user",
+            const response = await apiClient.get(
+                "/api/Register/current-user",
                 {
                     headers: { 'Authorization': `Bearer ${token}` }
                 }
@@ -37,6 +38,7 @@ const Login = ({ setIsLoggedIn }) => {
             console.error("Error de verificación del token:", error);
             localStorage.removeItem("token");
             setIsLoggedIn(false);
+            setIsAdmin(false);
         }
     };
 
@@ -57,6 +59,7 @@ const Login = ({ setIsLoggedIn }) => {
 
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         setIsLoggedIn(true);
+        setIsAdmin(isAdmin);
         navigate("/");
     };
 
@@ -66,7 +69,7 @@ const Login = ({ setIsLoggedIn }) => {
         setIsLoading(true);
 
         try {
-            const loginResponse = await axios.post("https://localhost:7191/login", {
+            const loginResponse = await apiClient.post("/login", {
                 email,
                 password,
             });
@@ -216,4 +219,3 @@ const Login = ({ setIsLoggedIn }) => {
 };
 
 export default Login;
-

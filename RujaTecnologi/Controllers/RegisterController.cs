@@ -69,7 +69,7 @@ namespace SeñorPolfavol.Controllers
         }
 
         [HttpGet("current-user")]
-        [Authorize]
+        [AllowAnonymous]
         public async Task<IActionResult> GetCurrentUser()
         {
             // Obtiene el ID del usuario autenticado
@@ -96,7 +96,7 @@ namespace SeñorPolfavol.Controllers
                 Roles = roles
             });
         }
-
+        [AllowAnonymous]
         [HttpGet("all-users-with-roles")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllUsersWithRoles(int page = 1, int pageSize = 10)
@@ -132,7 +132,7 @@ namespace SeñorPolfavol.Controllers
             return Ok(result);
         }
 
-
+        [AllowAnonymous]
         [HttpPut("update-user-roles/{userId}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateUserRoles(string userId, [FromBody] UpdateUserModel model)
@@ -188,7 +188,7 @@ namespace SeñorPolfavol.Controllers
             return Ok(new { message = "User updated successfully." });
         }
 
-
+        [AllowAnonymous]
         [HttpDelete("delete-user/{userId}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUser(string userId)
